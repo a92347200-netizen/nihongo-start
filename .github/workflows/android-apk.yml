@@ -1,0 +1,58 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Create package.json
+        run: |
+          cat > package.json <<'EOF'
+          {
+            "name": "nihongo-start",
+            "version": "1.0.0",
+            "private": true,
+            "dependencies": {
+              "@capacitor/cli": "^8.0.0",
+              "@capacitor/core": "^8.0.0",
+              "@capacitor/android": "^8.0.0"
+            }
+          }
+          EOF
+
+      - name: Prepare web files
+        run: |
+          mkdir -p www
+          cp nihongo-start-index.html www/index.html
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Create Capacitor project
+        run: |
+          npx cap init "니혼고 첫걸음" "com.nihongostart.app" --web-dir www
+          npx cap add android
+          npx cap copy android
+
+      - name: Build APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nihongo-start-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
